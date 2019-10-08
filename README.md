@@ -2,7 +2,7 @@ Upload images:
 
 	./upload-fedora-atomic.sh
 	./upload-fedora-coreos.sh
-	
+
 Create cluster:
 
 	./fedora-atomic.sh
