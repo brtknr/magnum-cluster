@@ -13,6 +13,8 @@ Install and run sonobuoy:
         ./install-sonobuoy.sh
 	./sonobuoy-atomic.sh
 	./sonobuoy-coreos.sh
+	focus="[Conformance]" ./sonobuoy-atomic.sh
+	focus="[Conformance]" ./sonobuoy-coreos.sh
 
 Destroy cluster:
 

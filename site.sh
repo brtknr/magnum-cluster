@@ -1,14 +1,18 @@
 set -x
 
 kube_tag=${kube_tag:-v1.16.0}
+plugins=${plugins:-flannel calico}
 nodes=${nodes:-2}
-for nd in flannel calico; do
+if [ "$minimal" == "true" ]; then
+    focus="should provide DNS for services" # minimal test
+fi
+for nd in $plugins; do
     name=k8s-$nd-$os_distro
     ctname=$name-$kube_tag
     if [ "$action" != "destroy" ]; then
         if [[ -z $(openstack coe cluster template list | grep $ctname) ]]; then
             image=${image:-`openstack image list --property os_distro=$os_distro -f value -c Name`}
-            openstack coe cluster template create --floating-ip-enabled --external-network public --fixed-network private --fixed-subnet private-subnet --image $image --flavor ds2G --master-flavor ds2G --docker-storage-driver overlay2 --coe kubernetes --network-driver $nd --labels kube_tag=$kube_tag --dns-nameserver 1.1.1.1 $ctname
+            openstack coe cluster template create --floating-ip-enabled --external-network public --image $image --flavor ds2G --master-flavor ds2G --fixed-network=private --fixed-subnet=private-subnet --docker-storage-driver overlay2 --coe kubernetes --network-driver $nd --labels kube_tag=$kube_tag --dns-nameserver 1.1.1.1 $ctname
         fi
     fi
     if [ "$action" == "create" ]; then
@@ -19,7 +23,8 @@ for nd in flannel calico; do
         openstack coe cluster upgrade $name $ctname
     elif [ "$action" == "sonobuoy" ]; then
         openstack coe cluster config $name --dir ~/.kube --force
-        sonobuoy run --e2e-focus "should provide DNS for services" # minimal test
+        sonobuoy delete --wait
+        sonobuoy run --e2e-focus "$focus"
     elif [ "$action" == "destroy" ]; then
         openstack coe cluster delete $name
         while [[ -z "$(openstack coe cluster template delete $ctname | grep 'HTTP 404')" ]]; do sleep 10; done &
