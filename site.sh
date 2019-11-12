@@ -1,18 +1,25 @@
 set -x
 
-kube_tag=${kube_tag:-v1.16.0}
+kube_tag=${kube_tag:-v1.14.8}
 plugins=${plugins:-flannel calico}
 nodes=${nodes:-2}
+prefix=${prefix:-k8s}
+ctprefix=${ctprefix:-k8s}
+
 if [ "$minimal" == "true" ]; then
     focus="should provide DNS for services" # minimal test
 fi
+
+if [ "$action" != "destroy" ]; then
+    image=${image:-`openstack image list --property os_distro=$os_distro -f value -c Name | tail -n1`}
+fi
+
 for nd in $plugins; do
-    name=k8s-$nd-$os_distro
-    ctname=$name-$kube_tag
+    name=$prefix-$nd-$os_distro
+    ctname=$ctprefix-$nd-$os_distro-$kube_tag
     if [ "$action" != "destroy" ]; then
         if [[ -z $(openstack coe cluster template list | grep $ctname) ]]; then
-            image=${image:-`openstack image list --property os_distro=$os_distro -f value -c Name`}
-            openstack coe cluster template create --floating-ip-enabled --external-network public --image $image --flavor ds2G --master-flavor ds2G --fixed-network=private --fixed-subnet=private-subnet --docker-storage-driver overlay2 --coe kubernetes --network-driver $nd --labels kube_tag=$kube_tag --dns-nameserver 1.1.1.1 $ctname
+            openstack coe cluster template create --floating-ip-enabled --external-network public --image $image --flavor ds2G --master-flavor ds2G --fixed-network=private --fixed-subnet=private-subnet --docker-storage-driver overlay2 --coe kubernetes --network-driver $nd --labels heat_container_agent_tag=689704,kube_tag=$kube_tag$extra_labels --dns-nameserver 1.1.1.1 $ctname
         fi
     fi
     if [ "$action" == "create" ]; then
